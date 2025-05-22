@@ -11,6 +11,23 @@ import re
 client = openai.OpenAI(api_key=st.secrets["openai"]["api_key"])
 MODEL = "gpt-4o"
 
+# --- HELPER FUNCTIONS ---
+def extract_text_from_pdf(filepath):
+    doc = fitz.open(filepath)
+    return "\n".join(page.get_text() for page in doc)
+
+def extract_text_from_docx(filepath):
+    doc = docx.Document(filepath)
+    return "\n".join(p.text for p in doc.paragraphs)
+
+def parse_file(filepath):
+    if filepath.endswith(".pdf"):
+        return extract_text_from_pdf(filepath)
+    elif filepath.endswith(".docx"):
+        return extract_text_from_docx(filepath)
+    else:
+        raise ValueError("Unsupported file type")
+
 def compare_clause(document_text, term_sheet_df):
     system_prompt = """
     You are a legal AI assistant. Your task is to evaluate an NDA against a list of 34 standard legal issues provided by the legal department.
