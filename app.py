@@ -113,20 +113,4 @@ if uploaded_file:
         if not compliance_df.empty:
             st.dataframe(compliance_df)
 
-            csv = compliance_df.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="💾 Download Compliance Table as .csv",
-                data=csv,
-                file_name="compliance_table.csv",
-                mime="text/csv"
-            )
-
-        markdown_bytes = compliance_table_md.encode('utf-8')
-        st.download_button(
-            label="📄 Download Compliance Table as .md",
-            data=markdown_bytes,
-            file_name="compliance_table.md",
-            mime="text/markdown"
-        )
-
-    st.info("Scroll down to copy or export the table as needed.")
+    st.info("Scroll down to view the extracted compliance results.")
