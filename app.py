@@ -7,7 +7,7 @@ import tempfile
 
 # --- CONFIGURATION ---
 client = openai.OpenAI(api_key=st.secrets["openai"]["api_key"])
-MODEL = "gpt-4"
+MODEL = "gpt-4-turbo"
 
 # --- HELPER FUNCTIONS ---
 def extract_text_from_pdf(file):
