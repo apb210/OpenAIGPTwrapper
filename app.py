@@ -65,7 +65,7 @@ And here is the NDA_Term_Sheet.csv content:
 """
 
 Generate only the final compliance table.
-    """
+"""
 
     response = openai.ChatCompletion.create(
         model=MODEL,
