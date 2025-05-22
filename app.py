@@ -11,23 +11,6 @@ import re
 client = openai.OpenAI(api_key=st.secrets["openai"]["api_key"])
 MODEL = "gpt-4o"
 
-# --- HELPER FUNCTIONS ---
-def extract_text_from_pdf(filepath):
-    doc = fitz.open(filepath)
-    return "\n".join(page.get_text() for page in doc)
-
-def extract_text_from_docx(filepath):
-    doc = docx.Document(filepath)
-    return "\n".join(p.text for p in doc.paragraphs)
-
-def parse_file(filepath):
-    if filepath.endswith(".pdf"):
-        return extract_text_from_pdf(filepath)
-    elif filepath.endswith(".docx"):
-        return extract_text_from_docx(filepath)
-    else:
-        raise ValueError("Unsupported file type")
-
 def compare_clause(document_text, term_sheet_df):
     system_prompt = """
     You are a legal AI assistant. Your task is to evaluate an NDA against a list of 34 standard legal issues provided by the legal department.
@@ -48,6 +31,8 @@ def compare_clause(document_text, term_sheet_df):
 
     Sort the table by Compliance Status (Missing → Non-compliant → Compliant).
     Be concise but specific.
+
+    Output the table in clean markdown format starting with a single header row.
     """
 
     user_prompt = f"""
@@ -70,12 +55,12 @@ def compare_clause(document_text, term_sheet_df):
 
 def parse_markdown_table(md_text):
     lines = md_text.strip().splitlines()
-    lines = [line for line in lines if '|' in line]
-    if len(lines) < 2:
+    table_lines = [line for line in lines if line.strip().startswith('|')]
+    if len(table_lines) < 3:
         return pd.DataFrame()
-    headers = [h.strip() for h in lines[0].split('|') if h.strip()]
+    headers = [h.strip() for h in table_lines[0].split('|') if h.strip()]
     rows = []
-    for line in lines[2:]:  # Skip header and separator
+    for line in table_lines[2:]:  # Skip header and separator
         cols = [c.strip() for c in line.split('|') if c.strip()]
         if len(cols) == len(headers):
             rows.append(cols)
@@ -104,4 +89,4 @@ if uploaded_file is not None:
         st.dataframe(compliance_df, use_container_width=True)
     else:
         st.error("⚠️ Unable to parse table from GPT output. See raw response below:")
-        st.text(compliance_md)
+        st.markdown(compliance_md)
