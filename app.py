@@ -94,7 +94,7 @@ if uploaded_file is not None:
         tmp_path = tmp.name
 
     document_text = parse_file(tmp_path)
-    term_sheet_df = pd.read_csv("standards.csv")
+    term_sheet_df = pd.read_csv("NDA_Term_Sheet.csv")
 
     st.info("Evaluating uploaded NDA against standard clauses...")
     with st.spinner("Calling OpenAI API..."):
