@@ -35,38 +35,39 @@ def parse_file(uploaded_file):
 
 def compare_clause(document_text, term_sheet_df):
     system_prompt = """
-        You are a legal AI assistant. Your task is to evaluate an NDA against a list of 34 standard legal issues provided by the legal department.
-        
-        The term sheet defines preferred and fallback positions for both unilateral NDAs and mutual NDAs (MNDAs). Your steps are:
-        1. Determine if the NDA content provided is unilateral or mutual.
-        2. Go through each row in the term sheet.
-        3. For each issue:
-           - Check if the relevant term is present in the NDA.
-           - Evaluate if it aligns with the preferred position (based on whether it's unilateral or mutual).
-           - If it does not align, check if the fallback position is acceptable.
-           - If neither, suggest a fallback.
-        4. Build a markdown table with the following columns:
-           - Issue
-           - Compliance Status: "Compliant", "Missing", or "Non-compliant"
-           - Reference from NDA: a snippet or phrase from the NDA that matches or is closest
-           - Suggested Fallback (if needed)
-        
-        Sort the table by Compliance Status (Missing → Non-compliant → Compliant).
-        Be concise but specific.
-        """
+    You are a legal AI assistant. Your task is to evaluate an NDA against a list of 34 standard legal issues provided by the legal department.
     
+    The term sheet defines preferred and fallback positions for both unilateral NDAs and mutual NDAs (MNDAs). Your steps are:
+    1. Determine if the NDA content provided is unilateral or mutual.
+    2. Go through each row in the term sheet.
+    3. For each issue:
+       - Check if the relevant term is present in the NDA.
+       - Evaluate if it aligns with the preferred position (based on whether it's unilateral or mutual).
+       - If it does not align, check if the fallback position is acceptable.
+       - If neither, suggest a fallback.
+    4. Build a markdown table with the following columns:
+       - Issue
+       - Compliance Status: "Compliant", "Missing", or "Non-compliant"
+       - Reference from NDA: a snippet or phrase from the NDA that matches or is closest
+       - Suggested Fallback (if needed)
+    
+    Sort the table by Compliance Status (Missing → Non-compliant → Compliant).
+    Be concise but specific.
+    """
+
     user_prompt = f"""
-        Below is the NDA content:
-        """
-        {document_text}
-        """
-        
-        And here is the NDA_Term_Sheet.csv content:
-        """
-        {term_sheet_df.to_csv(index=False)}
-        """    
-        Generate only the final compliance table.
-        """
+    Below is the NDA content:
+    """
+    {document_text}
+    """
+    
+    And here is the NDA_Term_Sheet.csv content:
+    """
+    {term_sheet_df.to_csv(index=False)}
+    """
+    
+    Generate only the final compliance table.
+    """
 
     response = client.chat.completions.create(
         model=MODEL,
@@ -78,6 +79,7 @@ def compare_clause(document_text, term_sheet_df):
     )
 
     return response.choices[0].message.content
+
 
 # --- STREAMLIT UI ---
 st.title("🔍 NDA Compliance Checker with OpenAI")
