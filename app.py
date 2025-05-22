@@ -12,58 +12,50 @@ client = openai.OpenAI(api_key=st.secrets["openai"]["api_key"])
 MODEL = "gpt-4o"
 
 # --- HELPER FUNCTIONS ---
-def extract_text_from_pdf(file):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-        tmp.write(file.read())
-        doc = fitz.open(tmp.name)
-        return "\n".join(page.get_text() for page in doc)
+def extract_text_from_pdf(filepath):
+    doc = fitz.open(filepath)
+    return "\n".join(page.get_text() for page in doc)
 
-def extract_text_from_docx(file):
-    doc = docx.Document(file)
+def extract_text_from_docx(filepath):
+    doc = docx.Document(filepath)
     return "\n".join(p.text for p in doc.paragraphs)
 
-def parse_file(uploaded_file):
-    if uploaded_file.name.endswith(".pdf"):
-        return extract_text_from_pdf(uploaded_file)
-    elif uploaded_file.name.endswith(".docx"):
-        return extract_text_from_docx(uploaded_file)
-    elif uploaded_file.name.endswith(".doc"):
-        st.warning(".doc parsing support is limited.")
-        return ""
+def parse_file(filepath):
+    if filepath.endswith(".pdf"):
+        return extract_text_from_pdf(filepath)
+    elif filepath.endswith(".docx"):
+        return extract_text_from_docx(filepath)
     else:
-        st.error("Unsupported file type.")
-        return ""
+        raise ValueError("Unsupported file type")
 
 def compare_clause(document_text, term_sheet_df):
     system_prompt = """
     You are a legal AI assistant. Your task is to evaluate an NDA against a list of 34 standard legal issues provided by the legal department.
-    
+
     The term sheet defines preferred and fallback positions for both unilateral NDAs and mutual NDAs (MNDAs). Your steps are:
     1. Determine if the NDA content provided is unilateral or mutual.
     2. Go through each row in the term sheet.
     3. For each issue:
-       - Check if the relevant term is present in the NDA.
-       - Evaluate if it aligns with the preferred position (based on whether it's unilateral or mutual).
-       - If it does not align, check if the fallback position is acceptable.
-       - If neither, suggest a fallback.
+    - Check if the relevant term is present in the NDA.
+    - Evaluate if it aligns with the preferred position (based on whether it's unilateral or mutual).
+    - If it does not align, check if the fallback position is acceptable.
+    - If neither, suggest a fallback.
     4. Build a markdown table with the following columns:
-       - Issue
-       - Compliance Status
-       - Reference from NDA
-       - Suggested Fallback (if needed)
-    
+    - Issue
+    - Compliance Status
+    - Reference from NDA
+    - Suggested Fallback (if needed)
+
     Sort the table by Compliance Status (Missing → Non-compliant → Compliant).
     Be concise but specific.
     """
 
     user_prompt = f"""
     Below is the NDA content:
-    \n{document_text}
-    
+    {document_text}
+
     And here is the NDA_Term_Sheet.csv content:
-    \n{term_sheet_df.to_csv(index=False)}
-    
-    Generate only the final compliance table in markdown format using | and --- for table headers.
+    {term_sheet_df.to_csv(index=False)}
     """
 
     response = client.chat.completions.create(
@@ -74,7 +66,6 @@ def compare_clause(document_text, term_sheet_df):
         ],
         temperature=0.2
     )
-
     return response.choices[0].message.content
 
 def parse_markdown_table(md_text):
@@ -91,26 +82,26 @@ def parse_markdown_table(md_text):
     return pd.DataFrame(rows, columns=headers)
 
 # --- STREAMLIT UI ---
-st.title("🔍 NDA Compliance Checker with OpenAI")
+st.title("🔍 NDA Compliance Checker")
 
-uploaded_file = st.file_uploader("Upload NDA (.pdf, .docx, .doc)", type=["pdf", "docx", "doc"])
+uploaded_file = st.file_uploader("Upload an NDA (.docx or .pdf)", type=["docx", "pdf"])
 
-if uploaded_file:
-    st.success("NDA uploaded successfully. Parsing...")
+if uploaded_file is not None:
+    with tempfile.NamedTemporaryFile(delete=False, suffix="." + uploaded_file.name.split(".")[-1]) as tmp:
+        tmp.write(uploaded_file.read())
+        tmp_path = tmp.name
 
-    document_text = parse_file(uploaded_file)
-    standards_df = pd.read_csv("NDA_Term_Sheet.csv")
+    document_text = parse_file(tmp_path)
+    term_sheet_df = pd.read_csv("standards.csv")
 
-    st.subheader("📄 Document Preview")
-    st.text_area("Extracted Text (First 1000 characters)", document_text[:1000], height=200)
+    st.info("Evaluating uploaded NDA against standard clauses...")
+    with st.spinner("Calling OpenAI API..."):
+        compliance_md = compare_clause(document_text, term_sheet_df)
+        compliance_df = parse_markdown_table(compliance_md)
 
-    st.subheader("✅ Clause Compliance Table")
-    with st.spinner("Evaluating NDA against all 34 issues using OpenAI..."):
-        compliance_table_md = compare_clause(document_text, standards_df)
-        st.markdown(compliance_table_md, unsafe_allow_html=False)
-
-        compliance_df = parse_markdown_table(compliance_table_md)
-        if not compliance_df.empty:
-            st.dataframe(compliance_df)
-
-    st.info("Scroll down to view the extracted compliance results.")
+    st.subheader("🧾 Compliance Table")
+    if not compliance_df.empty:
+        st.dataframe(compliance_df, use_container_width=True)
+    else:
+        st.error("⚠️ Unable to parse table from GPT output. See raw response below:")
+        st.text(compliance_md)
