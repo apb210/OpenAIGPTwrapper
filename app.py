@@ -9,15 +9,14 @@ import re
 
 # --- CONFIGURATION ---
 client = openai.OpenAI(api_key=st.secrets["openai"]["api_key"])
-MODEL = "gpt-3.5-turbo"  # Example model; replace as needed
+MODEL = "gpt-3.5-turbo"
 
 # --- HELPER FUNCTIONS ---
 def extract_text_from_pdf(file):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         tmp.write(file.read())
         doc = fitz.open(tmp.name)
-        text = "\n".join(page.get_text() for page in doc)
-    return text
+        return "\n".join(page.get_text() for page in doc)
 
 def extract_text_from_docx(file):
     doc = docx.Document(file)
@@ -49,8 +48,8 @@ def compare_clause(document_text, term_sheet_df):
        - If neither, suggest a fallback.
     4. Build a markdown table with the following columns:
        - Issue
-       - Compliance Status: "Compliant", "Missing", or "Non-compliant"
-       - Reference from NDA: a snippet or phrase from the NDA that matches or is closest
+       - Compliance Status
+       - Reference from NDA
        - Suggested Fallback (if needed)
     
     Sort the table by Compliance Status (Missing → Non-compliant → Compliant).
@@ -59,14 +58,10 @@ def compare_clause(document_text, term_sheet_df):
 
     user_prompt = f"""
     Below is the NDA content:
-    """
-    {document_text}
-    """
+    \n{document_text}
     
     And here is the NDA_Term_Sheet.csv content:
-    """
-    {term_sheet_df.to_csv(index=False)}
-    """
+    \n{term_sheet_df.to_csv(index=False)}
     
     Generate only the final compliance table in markdown format using | and --- for table headers.
     """
@@ -83,16 +78,17 @@ def compare_clause(document_text, term_sheet_df):
     return response.choices[0].message.content
 
 def parse_markdown_table(md_text):
-    lines = [line for line in md_text.splitlines() if '|' in line and not line.strip().startswith('|---')]
-    if not lines:
+    lines = md_text.strip().splitlines()
+    lines = [line for line in lines if '|' in line]
+    if len(lines) < 2:
         return pd.DataFrame()
-    headers = [col.strip() for col in lines[0].split('|') if col.strip()]
-    data = []
-    for line in lines[1:]:
-        cols = [col.strip() for col in line.split('|') if col.strip()]
+    headers = [h.strip() for h in lines[0].split('|') if h.strip()]
+    rows = []
+    for line in lines[2:]:  # Skip header and separator
+        cols = [c.strip() for c in line.split('|') if c.strip()]
         if len(cols) == len(headers):
-            data.append(cols)
-    return pd.DataFrame(data, columns=headers)
+            rows.append(cols)
+    return pd.DataFrame(rows, columns=headers)
 
 # --- STREAMLIT UI ---
 st.title("🔍 NDA Compliance Checker with OpenAI")
@@ -113,9 +109,10 @@ if uploaded_file:
         compliance_table_md = compare_clause(document_text, standards_df)
         st.markdown(compliance_table_md, unsafe_allow_html=False)
 
-        # Convert markdown table to DataFrame for CSV download
         compliance_df = parse_markdown_table(compliance_table_md)
         if not compliance_df.empty:
+            st.dataframe(compliance_df)
+
             csv = compliance_df.to_csv(index=False).encode('utf-8')
             st.download_button(
                 label="💾 Download Compliance Table as .csv",
@@ -124,7 +121,6 @@ if uploaded_file:
                 mime="text/csv"
             )
 
-        # Offer download as Markdown
         markdown_bytes = compliance_table_md.encode('utf-8')
         st.download_button(
             label="📄 Download Compliance Table as .md",
