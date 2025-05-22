@@ -6,7 +6,7 @@ import fitz  # PyMuPDF
 import tempfile
 
 # --- CONFIGURATION ---
-openai.api_key = st.secrets["openai"]["api_key"]
+client = openai.OpenAI(api_key=st.secrets["openai"]["api_key"])
 MODEL = "gpt-4"
 
 # --- HELPER FUNCTIONS ---
@@ -34,7 +34,7 @@ def parse_file(uploaded_file):
         return ""
 
 def compare_clause(document_text, term_sheet_df):
-    instructions = f"""
+    system_prompt = """
     You are a legal AI assistant. Your task is to evaluate an NDA against a list of 34 standard legal issues provided by the legal department.
     
     The term sheet defines preferred and fallback positions for both unilateral NDAs and mutual NDAs (MNDAs). Your steps are:
@@ -53,7 +53,9 @@ def compare_clause(document_text, term_sheet_df):
     
     Sort the table by Compliance Status (Missing → Non-compliant → Compliant).
     Be concise but specific.
+    """
     
+        user_prompt = f"""
     Below is the NDA content:
     """
     {document_text}
@@ -67,13 +69,16 @@ def compare_clause(document_text, term_sheet_df):
     Generate only the final compliance table.
     """
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model=MODEL,
-        messages=[{"role": "user", "content": instructions}],
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
         temperature=0.2
     )
 
-    return response['choices'][0]['message']['content']
+    return response.choices[0].message.content
 
 # --- STREAMLIT UI ---
 st.title("🔍 NDA Compliance Checker with OpenAI")
