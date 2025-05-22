@@ -4,10 +4,11 @@ import pandas as pd
 import docx
 import fitz  # PyMuPDF
 import tempfile
+import io
 
 # --- CONFIGURATION ---
 client = openai.OpenAI(api_key=st.secrets["openai"]["api_key"])
-MODEL = "gpt-3.5-turbo"
+MODEL = "gpt-3.5-turbo"  # Example model; replace as needed
 
 # --- HELPER FUNCTIONS ---
 def extract_text_from_pdf(file):
@@ -66,7 +67,7 @@ def compare_clause(document_text, term_sheet_df):
     {term_sheet_df.to_csv(index=False)}
     """
     
-    Generate only the final compliance table.
+    Generate only the final compliance table in markdown format using | and --- for table headers.
     """
 
     response = client.chat.completions.create(
@@ -79,7 +80,6 @@ def compare_clause(document_text, term_sheet_df):
     )
 
     return response.choices[0].message.content
-
 
 # --- STREAMLIT UI ---
 st.title("🔍 NDA Compliance Checker with OpenAI")
@@ -96,8 +96,17 @@ if uploaded_file:
     st.text_area("Extracted Text (First 1000 characters)", document_text[:1000], height=200)
 
     st.subheader("✅ Clause Compliance Table")
-    with st.spinner("Evaluating NDA against all 34 issues using GPT-4..."):
+    with st.spinner("Evaluating NDA against all 34 issues using OpenAI..."):
         compliance_table = compare_clause(document_text, standards_df)
-        st.markdown(compliance_table)
+        st.markdown(compliance_table, unsafe_allow_html=False)
+
+        # Offer download as Markdown
+        markdown_bytes = compliance_table.encode('utf-8')
+        st.download_button(
+            label="💾 Download Compliance Table as .md",
+            data=markdown_bytes,
+            file_name="compliance_table.md",
+            mime="text/markdown"
+        )
 
     st.info("Scroll down to copy or export the table as needed.")
