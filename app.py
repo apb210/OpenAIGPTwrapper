@@ -9,7 +9,7 @@ import re
 
 # --- CONFIGURATION ---
 client = openai.OpenAI(api_key=st.secrets["openai"]["api_key"])
-MODEL = "gpt-3.5-turbo"
+MODEL = "gpt-4o"
 
 # --- HELPER FUNCTIONS ---
 def extract_text_from_pdf(file):
