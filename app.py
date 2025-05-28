@@ -44,9 +44,9 @@ def compare_clause(document_text, term_sheet_df):
     - Issue
     - Compliance Status
     - Reference from NDA
-    - Suggested Fallback (if needed) worded in functional legal terms
+    - Suggested Fallback (if needed) worded in legal terms
     5. Make sure none of the clauses in NDA_Term_Sheet.csv are missing in the output.
-    Sort the table by Compliance Status (Missing → Non-compliant → Compliant). Numbering must start from 1. 
+    Sort the table by Compliance Status (Missing → Non-compliant → Compliant). 
     Be concise but specific.
 
     Output the table in clean markdown format starting with a single header row.
