@@ -45,7 +45,7 @@ def compare_clause(document_text, term_sheet_df):
     - Compliance Status
     - Reference from NDA
     - Suggested Fallback (if needed)
-
+    5. Make sure none of the clauses in NDA_Term_Sheet.csv are missing in the output.
     Sort the table by Compliance Status (Missing → Non-compliant → Compliant).
     Be concise but specific.
 
