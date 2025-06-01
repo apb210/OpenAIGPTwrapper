@@ -67,7 +67,7 @@ def compare_clause(document_text, term_sheet_df):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        temperature=0.2
+        # temperature=0.2 commenting for o3
     )
     return response.choices[0].message.content
 
