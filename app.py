@@ -9,7 +9,7 @@ import re
 
 # --- CONFIGURATION ---
 client = openai.OpenAI(api_key=st.secrets["openai"]["api_key"])
-MODEL = "gpt-4o"
+MODEL = "o4-mini"
 
 # --- HELPER FUNCTIONS ---
 def extract_text_from_pdf(filepath):
@@ -38,6 +38,7 @@ def compare_clause(document_text, term_sheet_df):
     3. For each issue:
     - Check if the relevant term is present in the NDA.
     - Evaluate if it aligns with the preferred position (based on whether it's unilateral or mutual).
+        - Alignment refers to legal alignment.
     - If it does not align, check if the fallback position is acceptable.
     - If neither, suggest a fallback.
     4. Build a markdown table with the following columns:
